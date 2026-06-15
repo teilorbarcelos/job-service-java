@@ -50,7 +50,7 @@ public class RabbitMqProvider {
             && channel != null && channel.isOpen();
     }
 
-    private String buildAmqpUri(URI uri) {
+    String buildAmqpUri(URI uri) {
         String uriUserInfo = uri.getUserInfo();
         String resolvedUser = resolveUser(uriUserInfo);
         String resolvedPass = resolvePass(uriUserInfo);

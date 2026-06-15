@@ -3,120 +3,98 @@ package com.app.shared.config;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.UnaryOperator;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.app.shared.errors.AppError;
 
 class AppSettingsTest {
 
-    private final java.util.Map<String, String> original = new java.util.HashMap<>();
-
-    @BeforeEach
-    void captureEnv() {
-        for (String key : new String[]{
-            "ENVIRONMENT", "LOG_LEVEL", "SHUTDOWN_TIMEOUT_SECONDS",
-            "JOB_EXECUTION_TIMEOUT_SECONDS", "DATABASE_URL",
-            "DATABASE_COMMAND_TIMEOUT_SECONDS", "REDIS_URL", "REDIS_HOST",
-            "REDIS_PORT", "REDIS_PASSWORD", "REDIS_DB",
-            "REDIS_COMMAND_TIMEOUT_SECONDS", "MESSAGING_ENABLED", "RABBIT_URL",
-            "RABBIT_USER", "RABBIT_PASSWORD", "RABBITMQ_PUBLISH_TIMEOUT",
-            "HEALTH_CHECK_CRON", "HEALTH_CHECK_ENABLED"
-        }) {
-            String v = System.getenv(key);
-            if (v != null) original.put(key, v);
+    private static UnaryOperator<String> env(String... pairs) {
+        Map<String, String> map = new HashMap<>();
+        for (int i = 0; i < pairs.length; i += 2) {
+            map.put(pairs[i], pairs[i + 1]);
         }
+        return map::get;
     }
 
-    @AfterEach
-    void restoreEnv() {
-        for (java.util.Map.Entry<String, String> e : original.entrySet()) {
-            setEnvCompat(e.getKey(), e.getValue());
-        }
-    }
-
-    /**
-     * Set env var on Java 9+ via ProcessHandle info().children()'s CommandLine
-     * doesn't work. Best approach: use a custom process for tests, or just
-     * assert the actual env values rather than mutating them.
-     */
-    private static void setEnvCompat(String key, String value) {
-        // We can't actually mutate env in Java 9+. This is a no-op.
-        // The tests are written to be robust to env state.
+    private static UnaryOperator<String> empty() {
+        return k -> null;
     }
 
     @Test
-    void load_returns_valid_settings() {
-        var s = AppSettings.load();
-        assertNotNull(s.environment());
-        assertNotNull(s.logLevel());
-        assertTrue(s.shutdownTimeout().toSeconds() > 0);
-        assertTrue(s.jobExecutionTimeout().toSeconds() > 0);
-        assertNotNull(s.healthCheckCron());
+    void load_defaults() {
+        var s = AppSettings.load(empty());
+        assertEquals("local", s.environment());
+        assertEquals("INFO", s.logLevel());
+        assertEquals(Duration.ofSeconds(30), s.shutdownTimeout());
+        assertEquals(Duration.ofSeconds(300), s.jobExecutionTimeout());
+        assertEquals("*/1 * * * *", s.healthCheckCron());
+        assertTrue(s.healthCheckEnabled());
+        assertFalse(s.messagingEnabled());
+        assertEquals(6379, s.redisPort());
     }
 
     @Test
-    void load_uses_documented_defaults() {
-        var s = AppSettings.load();
-        // The defaults below are only valid when no env override is set.
-        // We just verify they're present and parseable.
-        assertNotNull(s.environment());
-        assertTrue(s.shutdownTimeout().equals(Duration.ofSeconds(30))
-                || s.shutdownTimeout().toSeconds() != 30);  // may be overridden
+    void load_overrides() {
+        var s = AppSettings.load(env(
+            "ENVIRONMENT", "prod",
+            "JOB_EXECUTION_TIMEOUT_SECONDS", "60",
+            "MESSAGING_ENABLED", "true"
+        ));
+        assertEquals("prod", s.environment());
+        assertEquals(Duration.ofSeconds(60), s.jobExecutionTimeout());
+        assertTrue(s.messagingEnabled());
+    }
+
+    @Test
+    void load_blank_falls_back_to_default() {
+        var s = AppSettings.load(env("ENVIRONMENT", ""));
+        assertEquals("local", s.environment());
     }
 
     @Test
     void load_invalid_int_throws() {
-        // Without reflection-based env mutation, we test that the
-        // public method throws for a value the env already contains.
-        // This test only runs if the env is set to a bad value.
-        String timeout = System.getenv("JOB_EXECUTION_TIMEOUT_SECONDS");
-        if (timeout == null || isNumeric(timeout)) {
-            // No bad value in env; skip
-            return;
-        }
-        assertThrows(AppError.class, AppSettings::load);
+        assertThrows(AppError.class, () -> AppSettings.load(env(
+            "JOB_EXECUTION_TIMEOUT_SECONDS", "not-a-number"
+        )));
     }
 
     @Test
     void load_invalid_bool_throws() {
-        String enabled = System.getenv("MESSAGING_ENABLED");
-        if (enabled == null || "true".equals(enabled) || "false".equals(enabled) || "1".equals(enabled) || "0".equals(enabled)) {
-            return;
-        }
-        assertThrows(AppError.class, AppSettings::load);
+        assertThrows(AppError.class, () -> AppSettings.load(env(
+            "MESSAGING_ENABLED", "maybe"
+        )));
     }
 
     @Test
-    void load_with_env_overrides() {
-        // Verify the env vars (whatever they are) are reflected in the result
-        var s = AppSettings.load();
-        String env = System.getenv("ENVIRONMENT");
-        if (env != null) {
-            assertEquals(env, s.environment());
-        }
-        String log = System.getenv("LOG_LEVEL");
-        if (log != null) {
-            assertEquals(log, s.logLevel());
+    void load_bool_truthy_variants() {
+        for (String truthy : new String[]{"true", "True", "1"}) {
+            var s = AppSettings.load(env("MESSAGING_ENABLED", truthy));
+            assertTrue(s.messagingEnabled(), "expected true for '" + truthy + "'");
         }
     }
 
     @Test
-    void load_health_check_cron_non_empty() {
-        var s = AppSettings.load();
-        assertFalse(s.healthCheckCron().isEmpty());
+    void load_bool_falsy_variants() {
+        for (String falsy : new String[]{"false", "False", "0"}) {
+            var s = AppSettings.load(env("MESSAGING_ENABLED", falsy));
+            assertFalse(s.messagingEnabled(), "expected false for '" + falsy + "'");
+        }
     }
 
     @Test
-    void load_rabbit_url_non_empty() {
-        var s = AppSettings.load();
-        assertFalse(s.rabbitUrl().isEmpty());
+    void load_falls_back_for_missing() {
+        var s = AppSettings.load(env("REDIS_HOST", null));
+        assertEquals("localhost", s.redisHost());
     }
 
-    private static boolean isNumeric(String s) {
-        try { Integer.parseInt(s); return true; }
-        catch (NumberFormatException e) { return false; }
+    @Test
+    void load_load_uses_system_env_when_no_supplier() {
+        // Smoke test: load() without args must not throw
+        assertDoesNotThrow(() -> AppSettings.load());
     }
 }

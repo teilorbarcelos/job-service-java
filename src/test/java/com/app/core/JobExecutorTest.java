@@ -14,7 +14,7 @@ class JobExecutorTest {
 
     @Test
     void execute_succeeds() {
-        var job = new TestJob("ok", false, null, 0, false);
+        var job = new TestJob("ok", null, 0, false);
         var ctx = new JobContext(LOG);
         var result = JobExecutor.execute(job, ctx, Duration.ofSeconds(1));
         assertEquals("ok", result.job());
@@ -26,7 +26,7 @@ class JobExecutorTest {
 
     @Test
     void execute_fails_on_exception() {
-        var job = new TestJob("boom", true, new RuntimeException("kaboom"), 0, false);
+        var job = new TestJob("boom", new RuntimeException("kaboom"), 0, false);
         var ctx = new JobContext(LOG);
         var result = JobExecutor.execute(job, ctx, Duration.ofSeconds(1));
         assertEquals(JobStatus.FAILED, result.status());
@@ -34,8 +34,17 @@ class JobExecutorTest {
     }
 
     @Test
+    void execute_fails_on_error() {
+        var job = new TestJob("err", new java.lang.Error("oops"), 0, false);
+        var ctx = new JobContext(LOG);
+        var result = JobExecutor.execute(job, ctx, Duration.ofSeconds(1));
+        assertEquals(JobStatus.FAILED, result.status());
+        assertTrue(result.error().contains("oops"));
+    }
+
+    @Test
     void execute_times_out() {
-        var job = new TestJob("slow", false, null, 5_000, false);
+        var job = new TestJob("slow", null, 5_000, false);
         var ctx = new JobContext(LOG);
         var result = JobExecutor.execute(job, ctx, Duration.ofMillis(50));
         assertEquals(JobStatus.TIMEOUT, result.status());
@@ -43,31 +52,46 @@ class JobExecutorTest {
 
     @Test
     void execute_succeeds_with_null_timeout() {
-        var job = new TestJob("no-timeout", false, null, 0, false);
+        var job = new TestJob("no-timeout", null, 0, false);
         var ctx = new JobContext(LOG);
         var result = JobExecutor.execute(job, ctx, null);
         assertEquals(JobStatus.SUCCESS, result.status());
     }
 
     @Test
+    void execute_succeeds_with_zero_timeout() {
+        var job = new TestJob("zero", null, 0, false);
+        var ctx = new JobContext(LOG);
+        var result = JobExecutor.execute(job, ctx, Duration.ZERO);
+        assertEquals(JobStatus.SUCCESS, result.status());
+    }
+
+    @Test
     void execute_interrupted_returns_cancelled() {
-        var job = new TestJob("interruptible", false, null, 0, true);
+        var job = new TestJob("interruptible", null, 0, true);
         var ctx = new JobContext(LOG);
         var result = JobExecutor.execute(job, ctx, Duration.ofSeconds(2));
         assertEquals(JobStatus.CANCELLED, result.status());
     }
 
+    @Test
+    void execute_null_timeout_doesnt_apply_timeout_path() {
+        var job = new TestJob("with-null", null, 0, false);
+        var ctx = new JobContext(LOG);
+        var result = JobExecutor.execute(job, ctx, null);
+        assertEquals(JobStatus.SUCCESS, result.status());
+        assertTrue(result.durationMs() >= 0);
+    }
+
     static class TestJob implements BaseJob {
         private final String name;
-        private final boolean throwOnRun;
-        private final RuntimeException toThrow;
+        private final Throwable toThrow;
         private final long sleepMs;
         private final boolean interruptible;
         final AtomicBoolean ran = new AtomicBoolean(false);
 
-        TestJob(String name, boolean throwOnRun, RuntimeException toThrow, long sleepMs, boolean interruptible) {
+        TestJob(String name, Throwable toThrow, long sleepMs, boolean interruptible) {
             this.name = name;
-            this.throwOnRun = throwOnRun;
             this.toThrow = toThrow;
             this.sleepMs = sleepMs;
             this.interruptible = interruptible;
@@ -78,7 +102,10 @@ class JobExecutorTest {
         @Override public String description() { return "test"; }
         @Override public void run(JobContext context) throws Exception {
             ran.set(true);
-            if (throwOnRun) throw toThrow;
+            if (toThrow != null) {
+                if (toThrow instanceof Exception e) throw e;
+                throw new RuntimeException(toThrow);
+            }
             if (sleepMs > 0) Thread.sleep(sleepMs);
             if (interruptible) {
                 Thread.currentThread().interrupt();

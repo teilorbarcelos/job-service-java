@@ -2,6 +2,7 @@ package com.app.infrastructure.database;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.withSettings;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -59,10 +60,17 @@ class DataSourceProviderTest {
     }
 
     @Test
-    void close_closes_autocloseable() {
+    void close_skips_non_autocloseable() {
         var ds = mock(DataSource.class);
         var provider = new DataSourceProvider(ds);
         provider.close();
-        // No exception means it called close on the AutoCloseable
+    }
+
+    @Test
+    void close_invokes_autocloseable() throws Exception {
+        var ds = mock(DataSource.class, withSettings().extraInterfaces(AutoCloseable.class));
+        var provider = new DataSourceProvider(ds);
+        provider.close();
+        verify((AutoCloseable) ds).close();
     }
 }
