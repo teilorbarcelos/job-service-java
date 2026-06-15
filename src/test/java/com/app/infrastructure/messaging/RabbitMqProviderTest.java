@@ -51,14 +51,14 @@ class RabbitMqProviderTest {
     @Test
     void publish_with_explicit_user_password() {
         var p = new RabbitMqProvider();
-        p.init("amqp://user:pass@localhost:5672/", "override", "overridepass", 1000);
+        p.init("amqp://localhost:5672/", "override", "overridepass", 1000);
         // No connection attempted, just verifies init doesn't throw
     }
 
     @Test
     void get_publish_timeout() {
         var p = new RabbitMqProvider();
-        p.init("amqp://u:p@localhost:5672/", "", "", 5000);
+        p.init("amqp://localhost:5672/", "", "", 5000);
         assertEquals(5000L, p.getPublishTimeoutMs());
     }
 }

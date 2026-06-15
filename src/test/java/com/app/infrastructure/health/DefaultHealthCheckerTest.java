@@ -100,7 +100,7 @@ class DefaultHealthCheckerTest {
         return new AppSettings("test", "INFO", Duration.ofSeconds(5), Duration.ofSeconds(5),
             "jdbc:postgresql://localhost/test", Duration.ofSeconds(5),
             "", "h", 6379, "", 0, Duration.ofSeconds(5),
-            false, "amqp://u:u@localhost/", "u", "u", Duration.ofSeconds(5),
+            false, "amqp://localhost:5672/", "u", "u", Duration.ofSeconds(5),
             "*/1 * * * *", true);
     }
 }

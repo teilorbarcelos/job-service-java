@@ -16,7 +16,7 @@ import org.jboss.logging.Logger;
 @QuarkusMain
 public class Application implements QuarkusApplication {
 
-    private static final Logger LOG = LoggerFactory.create("com.app", "INFO");
+    private static final Logger LOG = LoggerFactory.create("com.app");
 
     public static void main(String[] args) {
         Quarkus.run(Application.class, args);

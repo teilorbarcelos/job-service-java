@@ -12,6 +12,9 @@ import com.rabbitmq.client.ConnectionFactory;
 
 public class RabbitMqProvider {
 
+    private static final String DEFAULT_USER = "guest";
+    private static final int DEFAULT_PORT = 5672;
+
     private final Object lock = new Object();
     private Connection connection;
     private Channel channel;
@@ -29,28 +32,43 @@ public class RabbitMqProvider {
 
     public void connect() throws IOException, TimeoutException, URISyntaxException {
         synchronized (lock) {
-            if (connection != null && connection.isOpen() && channel != null && channel.isOpen()) {
-                return;
-            }
+            if (isAlreadyConnected()) return;
             ConnectionFactory factory = new ConnectionFactory();
-            URI uri = new URI(url);
-            String uriUserInfo = uri.getUserInfo();
-            String u = (user == null || user.isBlank())
-                ? (uriUserInfo == null ? "guest" : uriUserInfo.split(":")[0])
-                : user;
-            String p = (password == null || password.isBlank())
-                ? (uriUserInfo != null && uriUserInfo.contains(":")
-                    ? uriUserInfo.split(":")[1] : "guest")
-                : password;
-            int port = uri.getPort() == -1 ? 5672 : uri.getPort();
+            String amqpUri = buildAmqpUri(new URI(url));
             try {
-                factory.setUri("amqp://" + u + ":" + p + "@" + uri.getHost() + ":" + port + "/");
+                factory.setUri(amqpUri);
             } catch (Exception e) {
                 throw new IOException("invalid rabbit uri: " + e.getMessage(), e);
             }
             connection = factory.newConnection("job-service-java");
             channel = connection.createChannel();
         }
+    }
+
+    private boolean isAlreadyConnected() {
+        return connection != null && connection.isOpen()
+            && channel != null && channel.isOpen();
+    }
+
+    private String buildAmqpUri(URI uri) {
+        String uriUserInfo = uri.getUserInfo();
+        String resolvedUser = resolveUser(uriUserInfo);
+        String resolvedPass = resolvePass(uriUserInfo);
+        int port = uri.getPort() == -1 ? DEFAULT_PORT : uri.getPort();
+        return "amqp://" + resolvedUser + ":" + resolvedPass + "@" + uri.getHost() + ":" + port + "/";
+    }
+
+    private String resolveUser(String uriUserInfo) {
+        if (user != null && !user.isBlank()) return user;
+        if (uriUserInfo == null) return DEFAULT_USER;
+        return uriUserInfo.split(":")[0];
+    }
+
+    private String resolvePass(String uriUserInfo) {
+        if (password != null && !password.isBlank()) return password;
+        if (uriUserInfo == null) return DEFAULT_USER;
+        if (!uriUserInfo.contains(":")) return DEFAULT_USER;
+        return uriUserInfo.split(":")[1];
     }
 
     public boolean isOpen() {

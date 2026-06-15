@@ -27,7 +27,7 @@ import java.util.List;
 @ApplicationScoped
 public class App {
 
-    private static final Logger LOG = LoggerFactory.create("com.app", "INFO");
+    private static final Logger LOG = LoggerFactory.create("com.app");
 
     private final Scheduler scheduler;
     private final DataSourceProvider dataSource;
