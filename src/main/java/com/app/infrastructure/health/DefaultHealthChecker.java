@@ -16,6 +16,16 @@ public class DefaultHealthChecker implements HealthChecker {
     @Inject RabbitMqProvider rabbit;
     @Inject AppSettings settings;
 
+    public DefaultHealthChecker() {}
+
+    public DefaultHealthChecker(DataSourceProvider dataSource, RedisProvider redis,
+                                RabbitMqProvider rabbit, AppSettings settings) {
+        this.dataSource = dataSource;
+        this.redis = redis;
+        this.rabbit = rabbit;
+        this.settings = settings;
+    }
+
     @Override
     public HealthCheckResult checkPostgres() {
         long start = System.nanoTime();

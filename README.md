@@ -1,182 +1,173 @@
-# Java Quarkus Backend — Enterprise Edition
+# job-service-java
 
-Backend de alta performance construído com **Java 21** e **Quarkus 3.x**,
-seguindo arquitetura modular, Clean Code e SOLID. Otimizado para alta
-escalabilidade e concorrência desde o boilerplate.
+> Scheduled job runner skeleton for Java 21 / Quarkus 3. Connects to
+> `backend-java-quarkus` to consume PostgreSQL, Redis, and RabbitMQ.
 
----
+A clean, idiomatic boilerplate for running cron-scheduled jobs in Java —
+no HTTP layer, no auth, no audit, no PDF, no storage. Just jobs.
 
-## Tecnologias e Ferramentas
+## Stack
 
-| Camada | Tecnologia |
-|--------|-----------|
-| **Core** | Java 21 + Quarkus 3.21.x |
-| **ORM** | Hibernate ORM com Panache (Repository Pattern) |
-| **Database** | PostgreSQL (prod/dev) / H2 (testes) |
-| **Migrações** | Flyway |
-| **Cache/Sessão** | Redis |
-| **Mensageria** | SmallRye Reactive Messaging RabbitMQ |
-| **Auth** | JWT HMAC‑SHA256 + Session Versioning (Redis) |
-| **API Docs** | OpenAPI 3.0 / Swagger UI |
-| **Métricas** | Micrometer + Prometheus |
-| **Logs** | JSON estruturado + MDC |
-| **Qualidade** | JaCoCo 100% (instructions & branches) |
+- **Java 21**
+- **Quarkus 3.21** (Worker mode — no HTTP)
+- **PostgreSQL** via `agroal` + `quarkus-jdbc-postgresql` (no Hibernate, no Flyway)
+- **Redis** via `quarkus-redis-client`
+- **RabbitMQ** via `com.rabbitmq:amqp-client` (via `quarkus-messaging-rabbitmq`)
+- **Cron** via `com.cronutils:cron-utils`
+- **Logging** via `org.jboss.logging.Logger`
+- **CDI** via `quarkus-arc`
+- **Tests** via JUnit 5 + Mockito + JaCoCo
 
----
-
-## Estrutura do Projeto
+## Architecture
 
 ```
 src/main/java/com/app/
-├── core/               # BaseEntity, BaseService, BaseResource, UuidGenerator
-├── infrastructure/     # JWT, Redis, Email, Logs, Storage, Rate Limit, PDF
-└── modules/            # Domínios de negócio (Product, User, Role, Auth…)
-    └── Product/
-        ├── ProductModel.java
-        ├── ProductRepository.java
-        ├── ProductService.java
-        └── ProductResource.java
+├── Application.java                    # @QuarkusMain entry point
+├── core/
+│   ├── BaseJob.java                    # Interface (name, schedule, run)
+│   ├── JobContext.java                 # Logger passed to Run
+│   ├── JobResult.java                  # Status, DurationMs, Error
+│   ├── JobStatus.java                  # SUCCESS, FAILED, CANCELLED, TIMEOUT
+│   ├── JobExecutor.java                # Stopwatch + CompletableFuture timeout
+│   ├── CronAdapter.java                # Testable seam (cron-utils impl)
+│   ├── CronUtilsAdapter.java           # Real impl
+│   └── Scheduler.java                  # ScheduledExecutorService + cron loop
+├── infrastructure/
+│   ├── database/DataSourceProvider.java  # Agroal DataSource wrapper
+│   ├── redis/RedisProvider.java          # Quarkus RedisDataSource wrapper
+│   ├── messaging/RabbitMqProvider.java   # RabbitMQ.Client publisher + check
+│   └── health/                          # DefaultHealthChecker (PG/Redis/Rabbit)
+├── jobs/
+│   ├── HealthCheckJob.java             # Example: status a cada minuto
+│   └── RegisterJobs.java               # Central registration
+└── shared/
+    ├── config/AppSettings.java         # Record + env loaders
+    ├── errors/AppError.java            # Hierarchy
+    └── utils/                          # LoggerFactory, AwaitShutdown
 ```
 
----
+## Quick start
 
-## Otimizações de Escalabilidade e Concorrência
+### 1. Subir infra local
 
-### Session Versioning (Redis)
-Token validation deixou de usar `SADD` + `SISMEMBER` (set cresce com cada login).
-Agora usa um **contador de versão** por usuário (`session:user:{id}:version`).
-O JWT carrega um claim `sv`; a validação é um único `GET` no Redis.
-Invalidação: incrementa `Auth.sessionVersion` no banco + `DEL` no Redis.
+```bash
+make infra-up
+```
 
-### Rate Limit Atômico
-Uma única chamada `INCR` + `EXPIRE` condicional.
-Race condition eliminada; latência do Redis reduzida à metade.
+### 2. Configurar `.env`
 
-### Índices de Performance
-- B‑tree composto `(is_deleted, active, created_at DESC)` em todas as tabelas de domínio.
-- GIN trigram funcional em `immutable_unaccent(lower(col))` nos campos `searchableFields` — acelera `LIKE '%palavra%'` com acentos.
+```bash
+cp .env.example .env
+# editar DATABASE_URL, RABBIT_URL, etc.
+```
 
-### UUID v7 (Time‑Ordered)
-Geração de UUIDs monotônicos (RFC 9562) — reduz fragmentação em índices B‑tree
-comparado a UUID v4. Implementação pura Java (`UuidGenerator`), sem dependências.
+### 3. Rodar em dev
 
-### JVM Container‑Aware
-Flags `-XX:+UseContainerSupport`, `-XX:MaxRAMPercentage=75.0`, `-XX:+UseG1GC`,
-`-XX:+ExitOnOutOfMemoryError`. O G1 enxerga os limites de memória do container.
+```bash
+make dev
+```
 
-### Virtual Threads
-`quarkus.virtual-threads.enabled=true` — I/O bloqueante não consome carrier threads.
-
-### Pool de Conexões
-`min-size=10`, `max-size=50`, `acquisition-timeout=5S`, `statement-batch-size=25`.
-Com leak detection e validation query.
-
-### Fast‑Jar
-Build produz `quarkus-app/` — layers de dependências separadas para melhor cache
-de imagem Docker.
-
-### Prometheus Cardinalidade Controlada
-Labels de métricas usam path normalizado (regex remove UUIDs e números),
-evitando explosão de séries temporais.
-
-### MDC Logging
-`requestId` e `userId` no MDC — toda linha de log carrega contexto sem
-parametrização explícita.
-
-### Optimistic Locking
-`@Version` em todas as entidades — concorrência em escritas lança
-`OptimisticLockException` → `409 Conflict` para o cliente retentar.
-
-### Compressão HTTP
-Respostas JSON comprimidas com gzip (nível 6).
-
----
-
-## 🔐 Segurança & RBAC
-
-### Autenticação (Session Versioning)
-
-1. **Login**: lê `Auth.sessionVersion` do banco, embute como claim `sv` no JWT,
-   escreve `session:user:{id}:version` no Redis.
-2. **Validação** (`AuthFilter`): extrai `sv` do JWT, compara com Redis.
-3. **Invalidação**: incrementa versão no banco + deleta chave Redis.
-   Todas as sessões do usuário são revogadas instantaneamente.
-
-### Autorização Declarativa
+### 4. Adicionar um job
 
 ```java
-@ResourceFeature("product")
-public class ProductResource extends BaseResource<...> { }
+// src/main/java/com/app/jobs/CleanupJob.java
+package com.app.jobs;
+
+import com.app.core.BaseJob;
+import com.app.core.JobContext;
+import com.app.shared.config.AppSettings;
+
+public class CleanupJob implements BaseJob {
+    @Override public String name() { return "cleanup"; }
+    @Override public String schedule() { return "0 3 * * *"; }
+    @Override public String description() { return "Remove registros antigos"; }
+    @Override public void run(JobContext context) {
+        context.logger().info("running cleanup");
+        // ... sua lógica
+    }
+}
 ```
 
-Permissões aplicadas via `PermissionFilter` com base no papel do usuário.
-
----
-
-## 📩 Mensageria (RabbitMQ)
-
-Integração via **SmallRye Reactive Messaging RabbitMQ** (`quarkus-messaging-rabbitmq`).
-Thread‑safe, lifecycle gerenciado pelo Quarkus, health check automático.
-
-```bash
-MESSAGING_ENABLED=true
-RABBIT_HOST=rabbitmq
-RABBIT_PORT=5672
+```java
+// src/main/java/com/app/jobs/RegisterJobs.java
+public static List<BaseJob> register(HealthChecker checker, AppSettings settings) {
+    return List.of(
+        new HealthCheckJob(checker, settings),
+        new CleanupJob(),  // ← novo
+    );
+}
 ```
-
----
-
-## 📦 Storage
-
-Agnóstico e extensível. Troca entre local / S3 / GCS / Azure via config.
-
-```bash
-STORAGE_DISK=local
-```
-
----
-
-## 📄 Geração de PDF
-
-Streaming bypass — o backend atua como proxy, sem carregar o PDF inteiro na RAM.
-Serviço externo em `http://localhost:8889`.
-
----
-
-## 📊 Observabilidade
-
-| Recurso | Endpoint |
-|---------|----------|
-| Health | `/health` (DB, Redis, RabbitMQ, Storage) |
-| Métricas | `/metrics` (Prometheus) |
-| Logs | JSON estruturado com MDC (`requestId`, `userId`) |
-| OpenAPI | `/v1/docs` (Swagger UI) |
-
-Subir stack de métricas:
-
-```bash
-make metrics-up
-# Prometheus: http://localhost:9090
-# Grafana: http://localhost:3001  (admin/admin)
-```
-
----
 
 ## Comandos
 
 ```bash
-make dev          # Hot Reload
-make test         # Testes + cobertura
-make coverage     # Testes + relatório de cobertura
-make generate name=Modulo  # Gerar novo módulo CRUD
-make infra-up     # Infraestrutura (DB, Redis, RabbitMQ)
+make dev          # Quarkus dev (hot reload)
+make test         # mvn test
+make coverage     # mvn verify (Jacoco)
+make lint         # mvn formatter:validate
+make check        # lint + test
+make build        # mvn package (fast-jar)
+make docker       # build image
+make run          # java -jar target/quarkus-app/quarkus-run.jar
+make infra-up     # docker compose up (PG+Redis+Rabbit)
+make infra-down   # docker compose down
+make sonar        # SonarQube scan
+make clean
 ```
 
----
+## Configuração (env vars)
 
-## Qualidade
+| Var | Default | Descrição |
+|---|---|---|
+| `ENVIRONMENT` | `local` | dev / staging / production |
+| `LOG_LEVEL` | `INFO` | TRACE/DEBUG/INFO/WARN/ERROR/FATAL |
+| `SHUTDOWN_TIMEOUT_SECONDS` | `30` | Max wait for cleanup on SIGTERM |
+| `JOB_EXECUTION_TIMEOUT_SECONDS` | `300` | Per-job timeout |
+| `DATABASE_URL` | (required) | PostgreSQL JDBC URL |
+| `DATABASE_COMMAND_TIMEOUT_SECONDS` | `10` | SELECT timeout |
+| `REDIS_URL` | (empty) | URL (preferred) |
+| `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | (if no URL) |
+| `REDIS_PASSWORD` | (empty) | |
+| `REDIS_DB` | `0` | |
+| `MESSAGING_ENABLED` | `false` | Enable RabbitMQ publisher |
+| `RABBIT_URL` | `amqp://guest:guest@localhost:5672/` | |
+| `RABBIT_USER` / `RABBIT_PASSWORD` | `guest` | |
+| `RABBITMQ_PUBLISH_TIMEOUT` | `5` | seconds |
+| `HEALTH_CHECK_CRON` | `*/1 * * * *` | 5-field cron |
+| `HEALTH_CHECK_ENABLED` | `true` | Disable health check |
 
-- **100% de cobertura** (instruções + branches) — trava no CI/CD.
-- **SonarQube** — quality gate em `http://localhost:9000`.
-- **Compliance** — suíte E2E em `mage-backend-compliance`.
-- **Auditoria** — `audit.tb_audit` + `audit.tb_error_log`.
+## Princípios
+
+- **S** Single Responsibility — cada job tem um único propósito
+- **O** Open/Closed — adicionar um job = criar uma classe + 1 linha de registro
+- **L** Liskov Substitution — todo `BaseJob` é intercambiável
+- **I** Interface Segregation — dependências injetadas via construtor
+- **D** Dependency Inversion — jobs dependem de abstrações, não de implementações
+- **DRY** — lógica compartilhada fica em `JobExecutor`
+- **Clean Code** — nomes expressivos, funções curtas, sem side-effects
+
+## Testes
+
+```bash
+make test
+```
+
+Coverage via JaCoCo (excluindo `Application.java`):
+- `core` — 100%
+- `infrastructure/database` — 100%
+- `infrastructure/health` — 100%
+- `infrastructure/messaging` — 100%
+- `infrastructure/redis` — 100%
+- `jobs` — 100%
+- `shared` — 100%
+
+## CI
+
+GitHub Actions roda em push/PR para `develop` e `main`:
+- `mvn formatter:validate` (lint)
+- `mvn test` com JaCoCo
+- Coverage gate: ≥85% line (excluindo `Application.java`)
+
+## License
+
+This is an open-source boilerplate. Use freely.
