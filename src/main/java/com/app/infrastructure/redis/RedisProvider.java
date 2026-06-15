@@ -1,20 +1,20 @@
 package com.app.infrastructure.redis;
 
 import io.quarkus.redis.datasource.RedisDataSource;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 
-@ApplicationScoped
 public class RedisProvider {
 
-    @Inject
-    RedisDataSource redis;
+    private final RedisDataSource redis;
+
+    public RedisProvider(RedisDataSource redis) {
+        this.redis = redis;
+    }
 
     public boolean ping() {
         try {
             return "PONG".equalsIgnoreCase(
                 redis.execute("PING").toString());
-        } catch (Exception e) {
+        } catch (Throwable t) {
             return false;
         }
     }

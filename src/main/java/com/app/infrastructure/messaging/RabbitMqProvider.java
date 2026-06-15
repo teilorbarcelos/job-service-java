@@ -10,9 +10,6 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 
-import jakarta.enterprise.context.ApplicationScoped;
-
-@ApplicationScoped
 public class RabbitMqProvider {
 
     private final Object lock = new Object();
@@ -37,9 +34,13 @@ public class RabbitMqProvider {
             }
             ConnectionFactory factory = new ConnectionFactory();
             URI uri = new URI(url);
-            String u = (user == null || user.isBlank()) ? uri.getUserInfo().split(":")[0] : user;
+            String uriUserInfo = uri.getUserInfo();
+            String u = (user == null || user.isBlank())
+                ? (uriUserInfo == null ? "guest" : uriUserInfo.split(":")[0])
+                : user;
             String p = (password == null || password.isBlank())
-                ? (uri.getUserInfo().contains(":") ? uri.getUserInfo().split(":")[1] : "")
+                ? (uriUserInfo != null && uriUserInfo.contains(":")
+                    ? uriUserInfo.split(":")[1] : "guest")
                 : password;
             int port = uri.getPort() == -1 ? 5672 : uri.getPort();
             try {

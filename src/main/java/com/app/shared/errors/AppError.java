@@ -10,6 +10,14 @@ public class AppError extends RuntimeException {
         this.statusCode = statusCode;
     }
 
+    @Override
+    public String getMessage() {
+        if (getCause() == null) {
+            return super.getMessage();
+        }
+        return super.getMessage() + ": " + getCause().getMessage();
+    }
+
     public AppError(String code, String message, int statusCode, Throwable cause) {
         super(message, cause);
         this.code = code;

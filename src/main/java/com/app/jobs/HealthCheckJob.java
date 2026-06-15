@@ -18,7 +18,8 @@ public class HealthCheckJob implements BaseJob {
 
     public HealthCheckJob(HealthChecker checker, AppSettings settings) {
         this.checker = checker;
-        this.cron = settings.healthCheckCron();
+        String c = settings.healthCheckCron();
+        this.cron = (c == null || c.isBlank()) ? "*/1 * * * *" : c;
         this.enabled = settings.healthCheckEnabled();
     }
 

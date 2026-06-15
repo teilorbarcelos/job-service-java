@@ -5,14 +5,13 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-@ApplicationScoped
 public class DataSourceProvider {
 
-    @Inject
-    DataSource dataSource;
+    private final DataSource dataSource;
+
+    public DataSourceProvider(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
 
     public Connection getConnection() throws SQLException {
         return dataSource.getConnection();
@@ -21,7 +20,7 @@ public class DataSourceProvider {
     public boolean ping() {
         try (Connection c = dataSource.getConnection()) {
             return c.isValid(1);
-        } catch (SQLException e) {
+        } catch (Exception e) {
             return false;
         }
     }

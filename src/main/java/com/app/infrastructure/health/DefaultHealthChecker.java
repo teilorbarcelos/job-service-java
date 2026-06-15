@@ -5,18 +5,12 @@ import com.app.infrastructure.messaging.RabbitMqProvider;
 import com.app.infrastructure.redis.RedisProvider;
 import com.app.shared.config.AppSettings;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-@ApplicationScoped
 public class DefaultHealthChecker implements HealthChecker {
 
-    @Inject DataSourceProvider dataSource;
-    @Inject RedisProvider redis;
-    @Inject RabbitMqProvider rabbit;
-    @Inject AppSettings settings;
-
-    public DefaultHealthChecker() {}
+    private final DataSourceProvider dataSource;
+    private final RedisProvider redis;
+    private final RabbitMqProvider rabbit;
+    private final AppSettings settings;
 
     public DefaultHealthChecker(DataSourceProvider dataSource, RedisProvider redis,
                                 RabbitMqProvider rabbit, AppSettings settings) {
