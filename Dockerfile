@@ -1,18 +1,22 @@
-# =============================================================================
-# Multi-stage build for production
-# =============================================================================
+### Build stage ###
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /build
 
-# --- Build stage ---
-FROM eclipse-temurin:21.0.11_9-jdk-alpine AS build
-WORKDIR /app
-COPY . .
-RUN chmod +x mvnw && ./mvnw package -DskipTests
+COPY pom.xml mvnw ./
+COPY .mvn .mvn
+RUN ./mvnw -B -ntp dependency:go-offline
 
-# --- Runtime stage ---
-FROM eclipse-temurin:21.0.11_9-jre-alpine
+COPY src ./src
+RUN ./mvnw -B -ntp -DskipTests package
+
+### Runtime stage ###
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/quarkus-app/ /app/quarkus-app/
-EXPOSE 8888
-CMD java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 \
-     -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError \
-     -jar quarkus-app/quarkus-run.jar
+
+RUN adduser -D -u 1001 jobservice
+USER jobservice
+
+COPY --from=build /build/target/quarkus-app /app/quarkus-app
+
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/quarkus-app/quarkus-run.jar"]
