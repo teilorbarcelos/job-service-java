@@ -59,6 +59,16 @@ class HealthCheckJobTest {
     }
 
     @Test
+    void job_default_cron_when_null() {
+        var checker = mock(HealthChecker.class);
+        var settings = new AppSettings("test", "INFO", Duration.ofSeconds(5), Duration.ofSeconds(5),
+            "", Duration.ofSeconds(5), "", "h", 6379, "", 0, Duration.ofSeconds(5),
+            false, "u", "u", "u", Duration.ofSeconds(5), null, false);
+        var job = new HealthCheckJob(checker, settings);
+        assertEquals("*/1 * * * *", job.schedule());
+    }
+
+    @Test
     void job_disabled_via_settings() {
         var checker = mock(HealthChecker.class);
         var settings = defaultSettings("*/1 * * * *", false);

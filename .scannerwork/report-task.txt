@@ -2,5 +2,5 @@ projectKey=job-service-java
 serverUrl=http://localhost:9000
 serverVersion=10.5.1.90531
 dashboardUrl=http://localhost:9000/dashboard?id=job-service-java
-ceTaskId=fedef118-ecdc-43f0-84fd-6916af4af079
-ceTaskUrl=http://localhost:9000/api/ce/task?id=fedef118-ecdc-43f0-84fd-6916af4af079
+ceTaskId=3b55933b-257f-4e62-a165-3bcea0a7cf6b
+ceTaskUrl=http://localhost:9000/api/ce/task?id=3b55933b-257f-4e62-a165-3bcea0a7cf6b

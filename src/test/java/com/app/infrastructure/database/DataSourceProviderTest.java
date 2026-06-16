@@ -73,4 +73,12 @@ class DataSourceProviderTest {
         provider.close();
         verify((AutoCloseable) ds).close();
     }
+
+    @Test
+    void close_swallows_exception() throws Exception {
+        var ds = mock(DataSource.class, withSettings().extraInterfaces(AutoCloseable.class));
+        doThrow(new RuntimeException("oops")).when((AutoCloseable) ds).close();
+        var provider = new DataSourceProvider(ds);
+        provider.close();
+    }
 }

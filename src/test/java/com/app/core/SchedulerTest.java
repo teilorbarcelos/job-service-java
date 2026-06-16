@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -141,6 +143,32 @@ class SchedulerTest {
     void is_running_false_when_not_started() {
         var scheduler = new Scheduler(List.of(), new CronUtilsAdapter(), Duration.ofSeconds(1), LOG);
         assertFalse(scheduler.isRunning("any"));
+    }
+
+    @Test
+    void is_running_true_during_execution() throws Exception {
+        CountDownLatch jobStarted = new CountDownLatch(1);
+        CountDownLatch blockJob = new CountDownLatch(1);
+        var jobs = List.<BaseJob>of(new TestJob("blocking", 0, false) {
+            @Override public void run(JobContext context) throws Exception {
+                jobStarted.countDown();
+                blockJob.await(5, TimeUnit.SECONDS);
+            }
+        });
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("UTC"))
+            .withSecond(59).withNano(0);
+        ZonedDateTime start = now.atZone(java.time.ZoneId.of("UTC"));
+        ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
+        try {
+            var scheduler = new Scheduler(jobs, new CronUtilsAdapter(), Duration.ofSeconds(1), LOG,
+                () -> start, exec);
+            scheduler.start();
+            assertTrue(jobStarted.await(3, TimeUnit.SECONDS), "job should start");
+            assertTrue(scheduler.isRunning("blocking"));
+        } finally {
+            blockJob.countDown();
+            exec.shutdownNow();
+        }
     }
 
     static class TestJob implements BaseJob {

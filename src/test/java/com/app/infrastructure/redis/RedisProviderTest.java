@@ -83,4 +83,12 @@ class RedisProviderTest {
         provider.close();
         verify((AutoCloseable) rds).close();
     }
+
+    @Test
+    void close_swallows_exception() throws Exception {
+        var rds = mock(RedisDataSource.class, withSettings().extraInterfaces(AutoCloseable.class));
+        doThrow(new RuntimeException("oops")).when((AutoCloseable) rds).close();
+        var provider = new RedisProvider(rds);
+        provider.close();
+    }
 }

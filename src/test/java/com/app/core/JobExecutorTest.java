@@ -104,7 +104,7 @@ class JobExecutorTest {
             ran.set(true);
             if (toThrow != null) {
                 if (toThrow instanceof Exception e) throw e;
-                throw new RuntimeException(toThrow);
+                throw (Error) toThrow;
             }
             if (sleepMs > 0) Thread.sleep(sleepMs);
             if (interruptible) {

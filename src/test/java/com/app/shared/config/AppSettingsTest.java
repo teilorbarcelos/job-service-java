@@ -87,6 +87,18 @@ class AppSettingsTest {
     }
 
     @Test
+    void load_blank_int_falls_back_to_default() {
+        var s = AppSettings.load(env("REDIS_PORT", ""));
+        assertEquals(6379, s.redisPort());
+    }
+
+    @Test
+    void load_blank_bool_falls_back_to_default() {
+        var s = AppSettings.load(env("MESSAGING_ENABLED", ""));
+        assertFalse(s.messagingEnabled());
+    }
+
+    @Test
     void load_falls_back_for_missing() {
         var s = AppSettings.load(env("REDIS_HOST", null));
         assertEquals("localhost", s.redisHost());

@@ -10,11 +10,15 @@ public final class AwaitShutdown {
     public static boolean waitForShutdown(long timeoutMs) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
         Runtime.getRuntime().addShutdownHook(new Thread(latch::countDown, "shutdown-listener"));
-        return latch.await(timeoutMs, TimeUnit.MILLISECONDS);
+        return awaitLatch(latch, timeoutMs);
     }
 
     public static boolean waitForShutdown(Duration timeout) throws InterruptedException {
         if (timeout == null) return waitForShutdown(Long.MAX_VALUE);
         return waitForShutdown(timeout.toMillis());
+    }
+
+    static boolean awaitLatch(CountDownLatch latch, long timeoutMs) throws InterruptedException {
+        return latch.await(timeoutMs, TimeUnit.MILLISECONDS);
     }
 }

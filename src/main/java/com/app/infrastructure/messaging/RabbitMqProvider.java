@@ -33,7 +33,7 @@ public class RabbitMqProvider {
     public void connect() throws IOException, TimeoutException, URISyntaxException {
         synchronized (lock) {
             if (isAlreadyConnected()) return;
-            ConnectionFactory factory = new ConnectionFactory();
+            ConnectionFactory factory = newConnectionFactory();
             String amqpUri = buildAmqpUri(new URI(url));
             try {
                 factory.setUri(amqpUri);
@@ -45,7 +45,11 @@ public class RabbitMqProvider {
         }
     }
 
-    private boolean isAlreadyConnected() {
+    ConnectionFactory newConnectionFactory() {
+        return new ConnectionFactory();
+    }
+
+    boolean isAlreadyConnected() {
         return connection != null && connection.isOpen()
             && channel != null && channel.isOpen();
     }
@@ -58,13 +62,13 @@ public class RabbitMqProvider {
         return "amqp://" + resolvedUser + ":" + resolvedPass + "@" + uri.getHost() + ":" + port + "/";
     }
 
-    private String resolveUser(String uriUserInfo) {
+    String resolveUser(String uriUserInfo) {
         if (user != null && !user.isBlank()) return user;
         if (uriUserInfo == null) return DEFAULT_USER;
         return uriUserInfo.split(":")[0];
     }
 
-    private String resolvePass(String uriUserInfo) {
+    String resolvePass(String uriUserInfo) {
         if (password != null && !password.isBlank()) return password;
         if (uriUserInfo == null) return DEFAULT_USER;
         if (!uriUserInfo.contains(":")) return DEFAULT_USER;
@@ -73,8 +77,7 @@ public class RabbitMqProvider {
 
     public boolean isOpen() {
         synchronized (lock) {
-            return connection != null && connection.isOpen()
-                && channel != null && channel.isOpen();
+            return isAlreadyConnected();
         }
     }
 
