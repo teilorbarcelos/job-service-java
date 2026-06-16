@@ -40,11 +40,8 @@ class AppSettingsTest {
 
     @Test
     void load_overrides() {
-        var s = AppSettings.load(env(
-            "ENVIRONMENT", "prod",
-            "JOB_EXECUTION_TIMEOUT_SECONDS", "60",
-            "MESSAGING_ENABLED", "true"
-        ));
+        var s = AppSettings
+                .load(env("ENVIRONMENT", "prod", "JOB_EXECUTION_TIMEOUT_SECONDS", "60", "MESSAGING_ENABLED", "true"));
         assertEquals("prod", s.environment());
         assertEquals(Duration.ofSeconds(60), s.jobExecutionTimeout());
         assertTrue(s.messagingEnabled());
@@ -58,21 +55,17 @@ class AppSettingsTest {
 
     @Test
     void load_invalid_int_throws() {
-        assertThrows(AppError.class, () -> AppSettings.load(env(
-            "JOB_EXECUTION_TIMEOUT_SECONDS", "not-a-number"
-        )));
+        assertThrows(AppError.class, () -> AppSettings.load(env("JOB_EXECUTION_TIMEOUT_SECONDS", "not-a-number")));
     }
 
     @Test
     void load_invalid_bool_throws() {
-        assertThrows(AppError.class, () -> AppSettings.load(env(
-            "MESSAGING_ENABLED", "maybe"
-        )));
+        assertThrows(AppError.class, () -> AppSettings.load(env("MESSAGING_ENABLED", "maybe")));
     }
 
     @Test
     void load_bool_truthy_variants() {
-        for (String truthy : new String[]{"true", "True", "1"}) {
+        for (String truthy : new String[] { "true", "True", "1" }) {
             var s = AppSettings.load(env("MESSAGING_ENABLED", truthy));
             assertTrue(s.messagingEnabled(), "expected true for '" + truthy + "'");
         }
@@ -80,7 +73,7 @@ class AppSettingsTest {
 
     @Test
     void load_bool_falsy_variants() {
-        for (String falsy : new String[]{"false", "False", "0"}) {
+        for (String falsy : new String[] { "false", "False", "0" }) {
             var s = AppSettings.load(env("MESSAGING_ENABLED", falsy));
             assertFalse(s.messagingEnabled(), "expected false for '" + falsy + "'");
         }

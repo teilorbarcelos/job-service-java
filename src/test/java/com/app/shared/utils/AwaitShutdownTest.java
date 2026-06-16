@@ -32,8 +32,7 @@ class AwaitShutdownTest {
     @Test
     void waitForShutdown_null_timeout_blocks_indefinitely_then_interrupts() {
         Thread.currentThread().interrupt();
-        assertThrows(InterruptedException.class, () ->
-            AwaitShutdown.waitForShutdown((Duration) null));
+        assertThrows(InterruptedException.class, () -> AwaitShutdown.waitForShutdown((Duration) null));
     }
 
     @Test

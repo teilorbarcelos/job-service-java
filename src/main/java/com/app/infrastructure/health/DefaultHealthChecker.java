@@ -12,8 +12,8 @@ public class DefaultHealthChecker implements HealthChecker {
     private final RabbitMqProvider rabbit;
     private final AppSettings settings;
 
-    public DefaultHealthChecker(DataSourceProvider dataSource, RedisProvider redis,
-                                RabbitMqProvider rabbit, AppSettings settings) {
+    public DefaultHealthChecker(DataSourceProvider dataSource, RedisProvider redis, RabbitMqProvider rabbit,
+            AppSettings settings) {
         this.dataSource = dataSource;
         this.redis = redis;
         this.rabbit = rabbit;
@@ -25,7 +25,8 @@ public class DefaultHealthChecker implements HealthChecker {
         long start = System.nanoTime();
         boolean ok = dataSource.ping();
         long latencyMs = (System.nanoTime() - start) / 1_000_000;
-        if (ok) return HealthCheckResult.up(latencyMs);
+        if (ok)
+            return HealthCheckResult.up(latencyMs);
         return HealthCheckResult.down(latencyMs, "ping returned false");
     }
 
@@ -34,7 +35,8 @@ public class DefaultHealthChecker implements HealthChecker {
         long start = System.nanoTime();
         boolean ok = redis.ping();
         long latencyMs = (System.nanoTime() - start) / 1_000_000;
-        if (ok) return HealthCheckResult.up(latencyMs);
+        if (ok)
+            return HealthCheckResult.up(latencyMs);
         return HealthCheckResult.down(latencyMs, "ping returned false");
     }
 
@@ -43,7 +45,8 @@ public class DefaultHealthChecker implements HealthChecker {
         if (!settings.messagingEnabled()) {
             return HealthCheckResult.disabled();
         }
-        if (rabbit.isOpen()) return HealthCheckResult.up(0L);
+        if (rabbit.isOpen())
+            return HealthCheckResult.up(0L);
         return HealthCheckResult.down(0L, "connection closed");
     }
 }

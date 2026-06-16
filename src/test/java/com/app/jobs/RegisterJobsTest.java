@@ -33,8 +33,8 @@ class RegisterJobsTest {
     }
 
     private static AppSettings settings(boolean healthCheckEnabled) {
-        return new AppSettings("test", "INFO", Duration.ofSeconds(5), Duration.ofSeconds(5),
-            "", Duration.ofSeconds(5), "", "h", 6379, "", 0, Duration.ofSeconds(5),
-            false, "u", "u", "u", Duration.ofSeconds(5), "*/1 * * * *", healthCheckEnabled);
+        return new AppSettings("test", "INFO", Duration.ofSeconds(5), Duration.ofSeconds(5), "", Duration.ofSeconds(5),
+                "", "h", 6379, "", 0, Duration.ofSeconds(5), false, "u", "u", "u", Duration.ofSeconds(5), "*/1 * * * *",
+                healthCheckEnabled);
     }
 }

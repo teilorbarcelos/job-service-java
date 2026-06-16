@@ -46,6 +46,6 @@ class CronUtilsSchedule implements CronSchedule {
     public ZonedDateTime next(ZonedDateTime from) {
         ZonedDateTime normalized = from.withZoneSameInstant(ZoneId.of("UTC"));
         return executionTime.nextExecution(normalized)
-            .orElseThrow(() -> new IllegalStateException("no next execution"));
+                .orElseThrow(() -> new IllegalStateException("no next execution"));
     }
 }

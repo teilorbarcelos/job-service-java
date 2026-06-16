@@ -32,7 +32,8 @@ public class RabbitMqProvider {
 
     public void connect() throws IOException, TimeoutException, URISyntaxException {
         synchronized (lock) {
-            if (isAlreadyConnected()) return;
+            if (isAlreadyConnected())
+                return;
             ConnectionFactory factory = newConnectionFactory();
             String amqpUri = buildAmqpUri(new URI(url));
             try {
@@ -50,8 +51,7 @@ public class RabbitMqProvider {
     }
 
     boolean isAlreadyConnected() {
-        return connection != null && connection.isOpen()
-            && channel != null && channel.isOpen();
+        return connection != null && connection.isOpen() && channel != null && channel.isOpen();
     }
 
     String buildAmqpUri(URI uri) {
@@ -63,15 +63,20 @@ public class RabbitMqProvider {
     }
 
     String resolveUser(String uriUserInfo) {
-        if (user != null && !user.isBlank()) return user;
-        if (uriUserInfo == null) return DEFAULT_USER;
+        if (user != null && !user.isBlank())
+            return user;
+        if (uriUserInfo == null)
+            return DEFAULT_USER;
         return uriUserInfo.split(":")[0];
     }
 
     String resolvePass(String uriUserInfo) {
-        if (password != null && !password.isBlank()) return password;
-        if (uriUserInfo == null) return DEFAULT_USER;
-        if (!uriUserInfo.contains(":")) return DEFAULT_USER;
+        if (password != null && !password.isBlank())
+            return password;
+        if (uriUserInfo == null)
+            return DEFAULT_USER;
+        if (!uriUserInfo.contains(":"))
+            return DEFAULT_USER;
         return uriUserInfo.split(":")[1];
     }
 
@@ -88,22 +93,30 @@ public class RabbitMqProvider {
             }
             byte[] body = json.getBytes(StandardCharsets.UTF_8);
             channel.basicPublish(exchange, routingKey, true, false,
-                new com.rabbitmq.client.AMQP.BasicProperties.Builder()
-                    .contentType("application/json")
-                    .deliveryMode(2)
-                    .build(),
-                body);
+                    new com.rabbitmq.client.AMQP.BasicProperties.Builder().contentType("application/json")
+                            .deliveryMode(2).build(),
+                    body);
         }
     }
 
     public void close() {
         synchronized (lock) {
-            try { if (channel != null && channel.isOpen()) channel.close(); } catch (Exception ignored) {}
-            try { if (connection != null && connection.isOpen()) connection.close(); } catch (Exception ignored) {}
+            try {
+                if (channel != null && channel.isOpen())
+                    channel.close();
+            } catch (Exception ignored) {
+            }
+            try {
+                if (connection != null && connection.isOpen())
+                    connection.close();
+            } catch (Exception ignored) {
+            }
             channel = null;
             connection = null;
         }
     }
 
-    long getPublishTimeoutMs() { return publishTimeoutMs; }
+    long getPublishTimeoutMs() {
+        return publishTimeoutMs;
+    }
 }

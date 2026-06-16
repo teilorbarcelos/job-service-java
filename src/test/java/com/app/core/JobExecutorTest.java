@@ -97,16 +97,31 @@ class JobExecutorTest {
             this.interruptible = interruptible;
         }
 
-        @Override public String name() { return name; }
-        @Override public String schedule() { return "* * * * *"; }
-        @Override public String description() { return "test"; }
-        @Override public void run(JobContext context) throws Exception {
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public String schedule() {
+            return "* * * * *";
+        }
+
+        @Override
+        public String description() {
+            return "test";
+        }
+
+        @Override
+        public void run(JobContext context) throws Exception {
             ran.set(true);
             if (toThrow != null) {
-                if (toThrow instanceof Exception e) throw e;
+                if (toThrow instanceof Exception e)
+                    throw e;
                 throw (Error) toThrow;
             }
-            if (sleepMs > 0) Thread.sleep(sleepMs);
+            if (sleepMs > 0)
+                Thread.sleep(sleepMs);
             if (interruptible) {
                 Thread.currentThread().interrupt();
                 throw new InterruptedException("test interrupt");

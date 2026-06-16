@@ -24,8 +24,13 @@ public class AppError extends RuntimeException {
         this.statusCode = statusCode;
     }
 
-    public String getCode() { return code; }
-    public int getStatusCode() { return statusCode; }
+    public String getCode() {
+        return code;
+    }
+
+    public int getStatusCode() {
+        return statusCode;
+    }
 
     public static AppError configuration(String message) {
         return new AppError("CONFIGURATION_ERROR", message, 500);

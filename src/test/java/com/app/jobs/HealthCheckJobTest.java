@@ -51,9 +51,9 @@ class HealthCheckJobTest {
     @Test
     void job_default_cron_when_empty() {
         var checker = mock(HealthChecker.class);
-        var settings = new AppSettings("test", "INFO", Duration.ofSeconds(5), Duration.ofSeconds(5),
-            "", Duration.ofSeconds(5), "", "h", 6379, "", 0, Duration.ofSeconds(5),
-            false, "u", "u", "u", Duration.ofSeconds(5), "", false);
+        var settings = new AppSettings("test", "INFO", Duration.ofSeconds(5), Duration.ofSeconds(5), "",
+                Duration.ofSeconds(5), "", "h", 6379, "", 0, Duration.ofSeconds(5), false, "u", "u", "u",
+                Duration.ofSeconds(5), "", false);
         var job = new HealthCheckJob(checker, settings);
         assertEquals("*/1 * * * *", job.schedule());
     }
@@ -61,9 +61,9 @@ class HealthCheckJobTest {
     @Test
     void job_default_cron_when_null() {
         var checker = mock(HealthChecker.class);
-        var settings = new AppSettings("test", "INFO", Duration.ofSeconds(5), Duration.ofSeconds(5),
-            "", Duration.ofSeconds(5), "", "h", 6379, "", 0, Duration.ofSeconds(5),
-            false, "u", "u", "u", Duration.ofSeconds(5), null, false);
+        var settings = new AppSettings("test", "INFO", Duration.ofSeconds(5), Duration.ofSeconds(5), "",
+                Duration.ofSeconds(5), "", "h", 6379, "", 0, Duration.ofSeconds(5), false, "u", "u", "u",
+                Duration.ofSeconds(5), null, false);
         var job = new HealthCheckJob(checker, settings);
         assertEquals("*/1 * * * *", job.schedule());
     }
@@ -132,8 +132,8 @@ class HealthCheckJobTest {
     }
 
     private static AppSettings defaultSettings(String cron, boolean enabled) {
-        return new AppSettings("test", "INFO", Duration.ofSeconds(5), Duration.ofSeconds(5),
-            "", Duration.ofSeconds(5), "", "h", 6379, "", 0, Duration.ofSeconds(5),
-            false, "u", "u", "u", Duration.ofSeconds(5), cron, enabled);
+        return new AppSettings("test", "INFO", Duration.ofSeconds(5), Duration.ofSeconds(5), "", Duration.ofSeconds(5),
+                "", "h", 6379, "", 0, Duration.ofSeconds(5), false, "u", "u", "u", Duration.ofSeconds(5), cron,
+                enabled);
     }
 }

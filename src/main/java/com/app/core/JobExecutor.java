@@ -10,7 +10,8 @@ import java.util.concurrent.TimeoutException;
 import org.jboss.logging.Logger;
 
 public final class JobExecutor {
-    private JobExecutor() {}
+    private JobExecutor() {
+    }
 
     public static JobResult execute(BaseJob job, JobContext context, Duration timeout) {
         Instant start = Instant.now();
@@ -44,8 +45,7 @@ public final class JobExecutor {
         }
     }
 
-    private static void executeWithTimeout(BaseJob job, JobContext context, long timeoutMs)
-            throws Exception {
+    private static void executeWithTimeout(BaseJob job, JobContext context, long timeoutMs) throws Exception {
         CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
             try {
                 job.run(context);

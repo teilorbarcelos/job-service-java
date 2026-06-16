@@ -24,10 +24,14 @@ public class HealthCheckJob implements BaseJob {
     }
 
     @Override
-    public String name() { return "health-check"; }
+    public String name() {
+        return "health-check";
+    }
 
     @Override
-    public String schedule() { return cron; }
+    public String schedule() {
+        return cron;
+    }
 
     @Override
     public String description() {
@@ -35,17 +39,18 @@ public class HealthCheckJob implements BaseJob {
     }
 
     @Override
-    public boolean enabled() { return enabled; }
+    public boolean enabled() {
+        return enabled;
+    }
 
     @Override
     public void run(JobContext context) {
         HealthCheckResult pg = checker.checkPostgres();
         HealthCheckResult rd = checker.checkRedis();
         HealthCheckResult rb = checker.checkRabbit();
-        context.logger().infof("Health check: postgres=%s redis=%s rabbit=%s",
-            pg.status(), rd.status(), rb.status());
+        context.logger().infof("Health check: postgres=%s redis=%s rabbit=%s", pg.status(), rd.status(), rb.status());
         String ts = DateTimeFormatter.ISO_INSTANT.format(Instant.now().atOffset(ZoneOffset.UTC));
-        System.out.printf("[HealthCheck %s] postgres=%s redis=%s rabbitmq=%s%n",
-            ts, pg.status(), rd.status(), rb.status());
+        System.out.printf("[HealthCheck %s] postgres=%s redis=%s rabbitmq=%s%n", ts, pg.status(), rd.status(),
+                rb.status());
     }
 }

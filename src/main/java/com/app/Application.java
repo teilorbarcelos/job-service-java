@@ -25,12 +25,12 @@ public class Application implements QuarkusApplication {
     @Override
     public int run(String... args) {
         AppSettings settings = AppSettings.load();
-        LOG.infof("Starting job-service-java (env=%s, log=%s, execTimeout=%ds)",
-            settings.environment(), settings.logLevel(),
-            settings.jobExecutionTimeout().toSeconds());
+        LOG.infof("Starting job-service-java (env=%s, log=%s, execTimeout=%ds)", settings.environment(),
+                settings.logLevel(), settings.jobExecutionTimeout().toSeconds());
 
         App app = App.bootstrap(settings);
-        if (app == null) return 1;
+        if (app == null)
+            return 1;
 
         try {
             app.scheduler().start();

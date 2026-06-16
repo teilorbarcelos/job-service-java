@@ -12,8 +12,7 @@ public class RedisProvider {
 
     public boolean ping() {
         try {
-            return "PONG".equalsIgnoreCase(
-                redis.execute("PING").toString());
+            return "PONG".equalsIgnoreCase(redis.execute("PING").toString());
         } catch (Throwable t) {
             return false;
         }

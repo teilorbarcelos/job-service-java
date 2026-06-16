@@ -35,8 +35,8 @@ public class App {
     private final RabbitMqProvider rabbit;
     private final AppSettings settings;
 
-    public App(Scheduler scheduler, DataSourceProvider dataSource, RedisProvider redis,
-              RabbitMqProvider rabbit, AppSettings settings) {
+    public App(Scheduler scheduler, DataSourceProvider dataSource, RedisProvider redis, RabbitMqProvider rabbit,
+            AppSettings settings) {
         this.scheduler = scheduler;
         this.dataSource = dataSource;
         this.redis = redis;
@@ -44,17 +44,40 @@ public class App {
         this.settings = settings;
     }
 
-    public Scheduler scheduler() { return scheduler; }
-    public DataSourceProvider dataSource() { return dataSource; }
-    public RedisProvider redis() { return redis; }
-    public RabbitMqProvider rabbit() { return rabbit; }
-    public AppSettings settings() { return settings; }
+    public Scheduler scheduler() {
+        return scheduler;
+    }
+
+    public DataSourceProvider dataSource() {
+        return dataSource;
+    }
+
+    public RedisProvider redis() {
+        return redis;
+    }
+
+    public RabbitMqProvider rabbit() {
+        return rabbit;
+    }
+
+    public AppSettings settings() {
+        return settings;
+    }
 
     public void shutdown() {
         scheduler.stop();
-        try { rabbit.close(); } catch (Exception ignored) {}
-        try { redis.close(); } catch (Exception ignored) {}
-        try { dataSource.close(); } catch (Exception ignored) {}
+        try {
+            rabbit.close();
+        } catch (Exception ignored) {
+        }
+        try {
+            redis.close();
+        } catch (Exception ignored) {
+        }
+        try {
+            dataSource.close();
+        } catch (Exception ignored) {
+        }
     }
 
     @Produces
@@ -80,8 +103,8 @@ public class App {
     public RabbitMqProvider rabbitProvider(AppSettings settings) throws Exception {
         var p = new RabbitMqProvider();
         if (settings.messagingEnabled()) {
-            p.init(settings.rabbitUrl(), settings.rabbitUser(),
-                settings.rabbitPassword(), settings.rabbitPublishTimeout().toMillis());
+            p.init(settings.rabbitUrl(), settings.rabbitUser(), settings.rabbitPassword(),
+                    settings.rabbitPublishTimeout().toMillis());
             p.connect();
             LOG.info("rabbit connected");
         }
@@ -90,8 +113,7 @@ public class App {
 
     @Produces
     @ApplicationScoped
-    public HealthChecker healthChecker(DataSourceProvider ds, RedisProvider r,
-                                       RabbitMqProvider rb, AppSettings s) {
+    public HealthChecker healthChecker(DataSourceProvider ds, RedisProvider r, RabbitMqProvider rb, AppSettings s) {
         return new DefaultHealthChecker(ds, r, rb, s);
     }
 
@@ -113,8 +135,7 @@ public class App {
             // Manual bootstrap path: used in tests and ad-hoc runs
             // where CDI isn't available. Production uses the @Produces
             // methods above via Quarkus DI.
-            throw new UnsupportedOperationException(
-                "Use the Quarkus runtime: it will instantiate App via @Inject");
+            throw new UnsupportedOperationException("Use the Quarkus runtime: it will instantiate App via @Inject");
         } catch (Exception e) {
             return null;
         }

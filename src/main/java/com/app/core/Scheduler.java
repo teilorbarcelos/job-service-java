@@ -32,11 +32,11 @@ public class Scheduler implements AutoCloseable {
 
     public Scheduler(List<BaseJob> jobs, CronAdapter cronAdapter, Duration timeout, Logger logger) {
         this(jobs, cronAdapter, timeout, logger, () -> ZonedDateTime.now(ZoneId.of("UTC")),
-             Executors.newScheduledThreadPool(Math.max(1, jobs.size())));
+                Executors.newScheduledThreadPool(Math.max(1, jobs.size())));
     }
 
     Scheduler(List<BaseJob> jobs, CronAdapter cronAdapter, Duration timeout, Logger logger,
-              Supplier<ZonedDateTime> nowSupplier, ScheduledExecutorService executor) {
+            Supplier<ZonedDateTime> nowSupplier, ScheduledExecutorService executor) {
         this.jobs = jobs;
         this.cronAdapter = cronAdapter;
         this.timeout = timeout;
@@ -55,7 +55,8 @@ public class Scheduler implements AutoCloseable {
         checkDuplicates();
         Map<String, CronSchedule> schedules = parseSchedules();
         for (BaseJob job : jobs) {
-            if (!job.enabled()) continue;
+            if (!job.enabled())
+                continue;
             CronSchedule schedule = schedules.get(job.name());
             scheduleNext(job, schedule);
         }
@@ -76,10 +77,12 @@ public class Scheduler implements AutoCloseable {
     private Map<String, CronSchedule> parseSchedules() {
         Map<String, CronSchedule> result = new HashMap<>();
         for (BaseJob job : jobs) {
-            if (!job.enabled()) continue;
+            if (!job.enabled())
+                continue;
             Optional<CronSchedule> parsed = cronAdapter.parse(job.schedule());
             if (parsed.isEmpty()) {
-                throw new IllegalStateException("invalid cron expression for job '" + job.name() + "': " + job.schedule());
+                throw new IllegalStateException(
+                        "invalid cron expression for job '" + job.name() + "': " + job.schedule());
             }
             result.put(job.name(), parsed.get());
         }
@@ -92,12 +95,14 @@ public class Scheduler implements AutoCloseable {
         long delayMs = Math.max(0, Duration.between(now, next).toMillis());
         logger.infof("Job %s scheduled to run in %dms (at %s)", job.name(), delayMs, next);
 
-        ScheduledFuture<?> future = executor.schedule(() -> runAndReschedule(job, schedule), delayMs, TimeUnit.MILLISECONDS);
+        ScheduledFuture<?> future = executor.schedule(() -> runAndReschedule(job, schedule), delayMs,
+                TimeUnit.MILLISECONDS);
         futures.put(job.name(), future);
     }
 
     private void runAndReschedule(BaseJob job, CronSchedule schedule) {
-        if (stopped.get()) return;
+        if (stopped.get())
+            return;
         AtomicBoolean flag = running.computeIfAbsent(job.name(), k -> new AtomicBoolean(false));
         if (!flag.compareAndSet(false, true)) {
             logger.warnf("Job %s still running, skipping this tick", job.name());
@@ -120,7 +125,8 @@ public class Scheduler implements AutoCloseable {
     }
 
     public void stop() {
-        if (!stopped.compareAndSet(false, true)) return;
+        if (!stopped.compareAndSet(false, true))
+            return;
         started.set(false);
         for (ScheduledFuture<?> f : futures.values()) {
             f.cancel(false);

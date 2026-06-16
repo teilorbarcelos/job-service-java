@@ -269,8 +269,7 @@ class RabbitMqProviderTest {
         p.close();
     }
 
-    private static void injectConnection(RabbitMqProvider p, Connection connection, Channel channel)
-            throws Exception {
+    private static void injectConnection(RabbitMqProvider p, Connection connection, Channel channel) throws Exception {
         var f = RabbitMqProvider.class.getDeclaredField("connection");
         f.setAccessible(true);
         f.set(p, connection);

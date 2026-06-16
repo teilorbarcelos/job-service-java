@@ -28,7 +28,7 @@ class SchedulerTest {
         ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
         try {
             var scheduler = new Scheduler(List.of(), new CronUtilsAdapter(), Duration.ofSeconds(1), LOG,
-                ZonedDateTime::now, exec);
+                    ZonedDateTime::now, exec);
             scheduler.start();
             scheduler.stop();
         } finally {
@@ -64,9 +64,7 @@ class SchedulerTest {
 
     @Test
     void start_rejects_duplicate_job_names() {
-        var jobs = List.<BaseJob>of(
-            new TestJob("a", 0, false),
-            new TestJob("a", 0, false));
+        var jobs = List.<BaseJob> of(new TestJob("a", 0, false), new TestJob("a", 0, false));
         var scheduler = new Scheduler(jobs, new CronUtilsAdapter(), Duration.ofSeconds(1), LOG);
         var ex = assertThrows(IllegalStateException.class, scheduler::start);
         assertTrue(ex.getMessage().contains("duplicate"));
@@ -75,9 +73,10 @@ class SchedulerTest {
 
     @Test
     void start_rejects_invalid_cron() {
-        var jobs = List.<BaseJob>of(new TestJob("bad", 0, false));
+        var jobs = List.<BaseJob> of(new TestJob("bad", 0, false));
         var adapter = new CronUtilsAdapter() {
-            @Override public java.util.Optional<CronSchedule> parse(String expression) {
+            @Override
+            public java.util.Optional<CronSchedule> parse(String expression) {
                 return java.util.Optional.empty();
             }
         };
@@ -90,15 +89,21 @@ class SchedulerTest {
     @Test
     void start_skips_disabled_jobs() throws Exception {
         AtomicInteger ran = new AtomicInteger();
-        var jobs = List.<BaseJob>of(new TestJob("disabled", 0, false) {
-            @Override public boolean enabled() { return false; }
-            @Override public void run(JobContext context) { ran.incrementAndGet(); }
+        var jobs = List.<BaseJob> of(new TestJob("disabled", 0, false) {
+            @Override
+            public boolean enabled() {
+                return false;
+            }
+
+            @Override
+            public void run(JobContext context) {
+                ran.incrementAndGet();
+            }
         });
         ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
         try {
             ZonedDateTime fixed = ZonedDateTime.of(2026, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"));
-            var scheduler = new Scheduler(jobs, new CronUtilsAdapter(), Duration.ofSeconds(1), LOG,
-                () -> fixed, exec);
+            var scheduler = new Scheduler(jobs, new CronUtilsAdapter(), Duration.ofSeconds(1), LOG, () -> fixed, exec);
             scheduler.start();
             Thread.sleep(100);
             scheduler.stop();
@@ -112,16 +117,18 @@ class SchedulerTest {
     void job_runs_at_scheduled_time() throws Exception {
         CountDownLatch ran = new CountDownLatch(1);
         // Start near a minute boundary so the next "every minute" cron fires soon
-        java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("UTC"))
-            .withSecond(59).withNano(0);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("UTC")).withSecond(59)
+                .withNano(0);
         ZonedDateTime start = now.atZone(java.time.ZoneId.of("UTC"));
-        var jobs = List.<BaseJob>of(new TestJob("fires", 50, false) {
-            @Override public void run(JobContext context) { ran.countDown(); }
+        var jobs = List.<BaseJob> of(new TestJob("fires", 50, false) {
+            @Override
+            public void run(JobContext context) {
+                ran.countDown();
+            }
         });
         ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
         try {
-            var scheduler = new Scheduler(jobs, new CronUtilsAdapter(), Duration.ofSeconds(1), LOG,
-                () -> start, exec);
+            var scheduler = new Scheduler(jobs, new CronUtilsAdapter(), Duration.ofSeconds(1), LOG, () -> start, exec);
             scheduler.start();
             assertTrue(ran.await(3, TimeUnit.SECONDS), "job should run at least once");
             scheduler.stop();
@@ -133,8 +140,8 @@ class SchedulerTest {
     @Test
     void current_time_returns_supplier() {
         ZonedDateTime fixed = ZonedDateTime.of(2026, 6, 15, 12, 0, 0, 0, ZoneId.of("UTC"));
-        var scheduler = new Scheduler(List.of(), new CronUtilsAdapter(), Duration.ofSeconds(1), LOG,
-            () -> fixed, Executors.newSingleThreadScheduledExecutor());
+        var scheduler = new Scheduler(List.of(), new CronUtilsAdapter(), Duration.ofSeconds(1), LOG, () -> fixed,
+                Executors.newSingleThreadScheduledExecutor());
         assertEquals(Instant.parse("2026-06-15T12:00:00Z"), scheduler.currentTime());
         scheduler.stop();
     }
@@ -149,19 +156,19 @@ class SchedulerTest {
     void is_running_true_during_execution() throws Exception {
         CountDownLatch jobStarted = new CountDownLatch(1);
         CountDownLatch blockJob = new CountDownLatch(1);
-        var jobs = List.<BaseJob>of(new TestJob("blocking", 0, false) {
-            @Override public void run(JobContext context) throws Exception {
+        var jobs = List.<BaseJob> of(new TestJob("blocking", 0, false) {
+            @Override
+            public void run(JobContext context) throws Exception {
                 jobStarted.countDown();
                 blockJob.await(5, TimeUnit.SECONDS);
             }
         });
-        java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("UTC"))
-            .withSecond(59).withNano(0);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(java.time.ZoneId.of("UTC")).withSecond(59)
+                .withNano(0);
         ZonedDateTime start = now.atZone(java.time.ZoneId.of("UTC"));
         ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
         try {
-            var scheduler = new Scheduler(jobs, new CronUtilsAdapter(), Duration.ofSeconds(1), LOG,
-                () -> start, exec);
+            var scheduler = new Scheduler(jobs, new CronUtilsAdapter(), Duration.ofSeconds(1), LOG, () -> start, exec);
             scheduler.start();
             assertTrue(jobStarted.await(3, TimeUnit.SECONDS), "job should start");
             assertTrue(scheduler.isRunning("blocking"));
@@ -182,13 +189,32 @@ class SchedulerTest {
             this.throwOnRun = throwOnRun;
         }
 
-        @Override public String name() { return name; }
-        @Override public String schedule() { return "*/1 * * * *"; }
-        @Override public String description() { return "test"; }
-        @Override public boolean enabled() { return true; }
-        @Override public void run(JobContext context) throws Exception {
-            if (throwOnRun) throw new RuntimeException("test failure");
-            if (sleepMs > 0) Thread.sleep(sleepMs);
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public String schedule() {
+            return "*/1 * * * *";
+        }
+
+        @Override
+        public String description() {
+            return "test";
+        }
+
+        @Override
+        public boolean enabled() {
+            return true;
+        }
+
+        @Override
+        public void run(JobContext context) throws Exception {
+            if (throwOnRun)
+                throw new RuntimeException("test failure");
+            if (sleepMs > 0)
+                Thread.sleep(sleepMs);
         }
     }
 }
