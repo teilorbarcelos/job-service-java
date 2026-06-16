@@ -61,8 +61,7 @@ jobs:
           MESSAGING_ENABLED: "false"
         run: |
           ./mvnw -B -ntp test \
-            -DargLine="-XX:+EnableDynamicAgentLoading" \
-            -Djacoco.excludes=com/app/Application.class
+            -Djacoco.excludes=**/Application.class
 
       - name: Check coverage gate (≥85% line, excluding Application.java)
         run: |
